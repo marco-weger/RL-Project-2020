@@ -1,0 +1,69 @@
+\documentclass{article}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{Progetto finale di Reti Logiche - A.A. 2019/2020}
+\rhead{Weger Marco}
+\cfoot{\thepage}
+
+% (1) choose a font that is available as T1
+% for example:
+\usepackage{lmodern}
+% (2) specify encoding
+\usepackage[T1]{fontenc}
+% (3) load symbol definitions
+\usepackage{textcomp}
+
+\usepackage[italian]{babel}
+
+\addto\captionsitalian{% Replace "english" with the language you use
+  \renewcommand{\contentsname}%
+    {Contenuto}%
+}
+
+\usepackage{graphicx}
+
+\begin{document}
+\pagenumbering{gobble}
+\title{Progetto finale di Reti Logiche}
+\author{Weger Marco - Matricola n° 888201}
+\date{Anno Accademico 2019/2020}
+\maketitle
+
+\tableofcontents
+
+\newpage
+\pagenumbering{arabic}
+\section{Introduzione}
+Per questo progetto mi sono posto l'obiettivo di descrivere un componente che rispetti le specifiche sia pre sintesi che in post sintesi.
+Ho voluto scrivere del codice di facile lettura e che si adatti in modo semplice e rapido a qualsiasi tipo di modifica del pattern e/o della dimensione della memoria e del suo contenuto (più dettagli in seguito).
+La FPGA consigliata non ci pone particolari vincoli di area quindi ho voluto dare particolare riguardo ai tempi di esecuzione.
+Per quanto riguarda la frequenza di clock non sono andato alla ricerca di una massimizzazione in quanto la specifica fissa il periodo di clock a 100 ns.
+\subsection{Obiettivi aggiuntivi}
+Una volta rispettate le richieste della specifica fornita mi sono posto i seguenti obiettivi:
+\begin{enumerate}
+	\item Minimizzare il tempo trascorso dal momento che il segnale di start viene ricevuto al momento di invio del segnale di done;
+	\item Disattivare il segnale di enable della memoria tra le varie esecuzioni;
+	\item Rendere il componente adattabile ad un'eventuale modifica della lunghezza dell'indirizzo della cella di memoria tramite una costante;
+	\item Rendere il componente adattabile ad un'eventuale modifica della dimensione di una singola cella di memoria tramite una costante (ADDR);
+	\item Rendere il componente adattabile ad un'eventuale modifica del numero di elementi in una working-zone tramite una costante (WZ\textunderscore OFFSET);
+	\item Rendere il componente adattabile ad un'eventuale modifica del numero di working-zone tramite una costante (WZ\textunderscore NUM).
+\end{enumerate}
+
+Al fine di raggiungere i sopracitati obiettivi ho assunto che l'indirizzo da codificare e l'indirizzo codificato vengano sempre salvati in successione in celle immediatamente consecutive all'ultimo indirizzo di working-zone (es. se ci fosse 16 working-zone RAM(16) conterrebbe l'indirizzo da codificare e RAM(17) l'indirizzo codificato).
+Tutte le ottimizzazioni descritte in seguito sono state valutate sulla base dei dati forniti dalla specifica e non tengono conto dell'eventuale crescita sproposita delle costanti sopracitate.
+\subsection{Funzionamento in sintesi}
+Una soluzione che memorizza tramite registri i valori delle working-zone non avrebbe migliorato in modo significativo i tempi di esecuzione peggiorando però l'area occupata pertando ho optato per la  in memoria a ogni esecuzione.
+La singola esecuzione di una codifica può essere descritta attraverso un numero finito di step (che poi diventeranno una macchina a stati finiti):
+\begin{enumerate}
+	\item Reset ed attesa del segnale di start (\textit{i\textunderscore start=1});
+	\item Abilitazione della memoria e richiesta dell'indirizo da codificare (salvato in un registro);
+	\item Richiesta della i-esima working-zone e confronto con l'indirizzo salvato, eventuale codifica e passaggio a step successivo (passo ripetuto per i compreso tra 0 e il numero di working-zone);
+	\item Scrittura dell'indirizzo codificato in memoria;
+	\item Invio segnale di elaborazione completata (\textit{o\textunderscore done=1}) e attesa feedback (\textit{i\textunderscore start=0}), il dato è disponibile fin dal momento in cui \textit{o\textunderscore done} viene portato a 1;
+\end{enumerate}
+\section{Architettura}
+\section{Sintesi}
+\section{Simulazioni}
+\section{Conclusione}
+
+\end{document}

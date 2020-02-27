@@ -1,90 +1,63 @@
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
-use ieee.std_logic_unsigned.all;   
-
-entity registry is
-  generic (
-    N : integer := 8
-  ); 
-  port ( 
-    i : in std_logic_vector(N-1 downto 0);
-    o : out std_logic_vector(N-1 downto 0);
-    clk, rst : in std_logic
-  );
-end registry;
-
-architecture Behavioral of registry is
-begin
-   process(clk, rst)
-   begin
-     if rst = '1' then 
-       o <= (others => '0');
-     elsif rising_edge(clk) then
-       o <= i;
-     end if;
-  end process;
-end Behavioral;
+package CONSTANTS is
+  constant SIZE_MEM : natural := 16;
+  constant SIZE_ADDR : natural := 8;
+  constant SIZE_WZ : natural := 4;
+  constant COUNT_WZ : natural := 3;
+  constant N_WZ : natural := 8;
+end package CONSTANTS;
 
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_unsigned.all;   
-
+use ieee.std_logic_unsigned.all;
+use WORK.CONSTANTS.ALL;  
+ 
 entity project_reti_logiche is
   port (
     i_clk : in std_logic;
     i_start : in std_logic;
     i_rst : in std_logic;
-    i_data : in std_logic_vector(7 downto 0);
-    o_address : out std_logic_vector(15 downto 0);
+    i_data : in std_logic_vector(SIZE_ADDR-1 downto 0);
+    o_address : out std_logic_vector(SIZE_MEM-1 downto 0);
     o_done : out std_logic;
     o_en : out std_logic;
     o_we : out std_logic;
-    o_data : out std_logic_vector (7 downto 0)
-      --o_add1        : out std_logic_vector (7 downto 0);
-      --o_cc        : out std_logic_vector (2 downto 0)
+    o_data : out std_logic_vector (SIZE_ADDR-1 downto 0)
   );
 end project_reti_logiche;
 
 architecture Behavioral of project_reti_logiche is
-  component registry is
-    generic (
-      N : integer := 8
-    ); 
-    port ( 
-      i : in std_logic_vector(N-1 downto 0);
+  component counter is
+    generic(N : integer);
+    port(
       o : out std_logic_vector(N-1 downto 0);
       clk, rst : in std_logic
     );
   end component;
-  component counter8 is
-    port ( 
-      o : out std_logic_vector(2 downto 0);
-      clk, rst : in std_logic
-    );
-  end component;
-  type state_type is (RST,EN_MEM,GET_ADDR,WZ,WRITEOUT,DONE);
+  type state_type is (RST,EN_MEM,GET_ADDR,WZ,W_MEM,DONE);
   signal next_state, current_state : state_type;
-  signal next_addr, current_addr : std_logic_vector(7 downto 0);
+  signal next_addr, current_addr : std_logic_vector(SIZE_ADDR-1 downto 0) := (others => '0');
   signal start_count : std_logic := '0';
-  signal count : std_logic_vector(2 downto 0);
+  signal count : std_logic_vector(COUNT_WZ-1 downto 0) := (others => '0');
 begin
-  REG_ADDR : registry
-    generic map(N => 8)
-    port map(i => next_addr,o => current_addr,clk => i_clk,rst => i_rst);
-  COUNTER : counter8
+  c: counter
+    generic map(N => COUNT_WZ)
     port map(o => count,clk => i_clk,rst => start_count);
     
   clock: process(i_clk, i_rst)
   begin
     if i_rst='1' then
       current_state <= RST;
+      current_addr <= (others => '0');
       o_en <= '0';
+      o_done <= '0';
+      o_we <= '0';
     elsif rising_edge(i_clk) then
       if i_start = '1' then
         current_state <= next_state;
-        if next_state = WRITEOUT then
+        current_addr <= next_addr;
+        o_en <= '1';
+        if next_state = W_MEM then
           o_done <= '0';
           o_we <= '1';
         elsif next_state = DONE then
@@ -94,30 +67,30 @@ begin
           o_done <= '0';
           o_we <= '0';
         end if;
-        o_en <= '1';
       elsif i_start = '0' then
-        o_done <= '0';
+        current_state <= current_state;
+        current_addr <= (others => '0');
         o_en <= '0';
+        o_done <= '0';
         o_we <= '0';
       end if;
     end if;
   end process;
   
   delta: process(current_state,i_data,count,current_addr)
+    variable one_hot : std_logic_vector(SIZE_WZ-1 downto 0);
   begin   
     case current_state is
       when RST =>
         start_count <= '0';
         next_state <= EN_MEM;
-        o_address <= std_logic_vector(to_unsigned(8, 16));
+        o_address <= std_logic_vector(to_unsigned(N_WZ, 16));
         o_data <= current_addr;
-        next_addr <= current_addr;       
---        o_cc <= count;
---        o_add1 <= current_addr;
+        next_addr <= current_addr;
       when EN_MEM =>
         start_count <= '0';
         next_state <= GET_ADDR;
-        o_address <= std_logic_vector(to_unsigned(8, 16));
+        o_address <= std_logic_vector(to_unsigned(N_WZ, 16));
         o_data <= current_addr;
         next_addr <= current_addr;
       when GET_ADDR =>
@@ -128,44 +101,34 @@ begin
         next_addr <= i_data;
       when WZ =>
         start_count <= '0';
-        if to_integer(unsigned(count)) < 7 then
-          if (to_integer(unsigned(current_addr)) - to_integer(unsigned(i_data))) = 0 then
-            next_addr <= "1" & count & "0001";
-            next_state <= WRITEOUT;
-            o_address <= std_logic_vector(to_unsigned(9, 16));
-          elsif (to_integer(unsigned(current_addr)) - to_integer(unsigned(i_data))) = 1 then
-            next_addr <= "1" & count & "0010";
-            next_state <= WRITEOUT;
-            o_address <= std_logic_vector(to_unsigned(9, 16));
-          elsif (to_integer(unsigned(current_addr)) - to_integer(unsigned(i_data))) = 2 then
-            next_addr <= "1" & count & "0100";
-            next_state <= WRITEOUT;
-            o_address <= std_logic_vector(to_unsigned(9, 16));
-          elsif (to_integer(unsigned(current_addr)) - to_integer(unsigned(i_data))) = 3 then
-            next_addr <= "1" & count & "1000";
-            next_state <= WRITEOUT;
-            o_address <= std_logic_vector(to_unsigned(9, 16));
-          else
-            next_addr <= current_addr;
+        o_data <= current_addr;
+          if (to_integer(unsigned(current_addr)) - to_integer(unsigned(i_data))) >= 0 and
+          (to_integer(unsigned(current_addr)) - to_integer(unsigned(i_data))) <= COUNT_WZ-1 and
+          to_integer(unsigned(count)) < N_WZ-1 then
+            one_hot := (others => '0');
+            one_hot((to_integer(unsigned(current_addr)) - to_integer(unsigned(i_data)))) := '1';
+            next_state <= W_MEM;
+            o_address <= std_logic_vector(to_unsigned(N_WZ+1, 16));
+            next_addr <= "1" & count & one_hot;
+          elsif to_integer(unsigned(count)) < N_WZ-1 then
             next_state <= WZ;
             o_address <= std_logic_vector(to_unsigned(1+to_integer(unsigned(count)), 16));
+            next_addr <= current_addr;
+          else
+            next_state <= W_MEM;
+            o_address <= std_logic_vector(to_unsigned(N_WZ+1, 16));
+            next_addr <= current_addr;
           end if;
-        else
-          next_state <= WRITEOUT;
-          o_address <= std_logic_vector(to_unsigned(9, 16));
-          next_addr <= current_addr;
-        end if;
-        o_data <= current_addr;
-      when WRITEOUT =>
+      when W_MEM =>
         start_count <= '0';
         next_state <= DONE;
-        o_address <= std_logic_vector(to_unsigned(9, 16));
+        o_address <= std_logic_vector(to_unsigned(N_WZ+1, 16));
         o_data <= current_addr;
         next_addr <= current_addr;
       when DONE =>
         start_count <= '0';
         next_state <= RST;
-        o_address <= std_logic_vector(to_unsigned(8, 16));
+        o_address <= std_logic_vector(to_unsigned(N_WZ+1, 16));
         o_data <= current_addr;
         next_addr <= current_addr;
       end case;
@@ -175,55 +138,27 @@ end Behavioral;
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_unsigned.all;   
+use ieee.std_logic_unsigned.all; 
 
-entity counter8 is
-  port ( 
-    o : out std_logic_vector(2 downto 0);
+entity counter is
+  generic(N : integer);
+  port(
+    o : out std_logic_vector(N-1 downto 0);
     clk, rst : in std_logic
   );
-end counter8;
+end counter;
 
-architecture Behavioral of counter8 is
-  type state_type is (S0,S1,S2,S3,S4,S5,S6,S7);
-  signal next_state, current_state : state_type;
+architecture counter of counter is
+  signal count : std_logic_vector(N-1 downto 0);
 begin
-   process(clk, rst)
-   begin
-     if rst = '1' then
-       current_state <= S0;
-     elsif rising_edge(clk) then
-       current_state <= next_state;
-     end if;
+  process(clk,rst)
+  begin
+    if rst = '1' then
+      count <= (others => '0');
+    elsif rising_edge(clk) then
+      count <= count + 1;
+    end if;
   end process;
   
-  process(current_state)
-  begin
-     case current_state is
-       when S0 =>
-         o <= "000";
-         next_state <= S1;
-       when S1 =>
-         o <= "001";
-         next_state <= S2;
-       when S2 =>
-         o <= "010";
-         next_state <= S3;
-       when S3 =>
-         o <= "011";
-         next_state <= S4;
-       when S4 =>
-         o <= "100";
-         next_state <= S5;
-       when S5 =>
-         o <= "101";
-         next_state <= S6;
-       when S6 =>
-         o <= "110";
-         next_state <= S7;
-       when S7 =>
-         o <= "111";
-         next_state <= S7;
-       end case;
-  end process;
-end Behavioral;
+  o <= count;
+end counter;
