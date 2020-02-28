@@ -10,6 +10,9 @@
 \usetikzlibrary{positioning} % ...positioning nodes
 \usetikzlibrary{arrows} % ...customizing arrows
 
+\usepackage{float}
+\usepackage{amsmath}
+
 \tikzset{
 ->, % makes the edges directed
 node distance=3cm, % specifies the minimum distance between two nodes. Change if necessary.
@@ -61,8 +64,14 @@ Dopo essermi assicurato di rispettate le richieste della specifica fornita mi so
 Al fine di raggiungere i sopracitati obiettivi ho assunto che l'indirizzo da codificare e l'indirizzo codificato vengano sempre salvati in successione in celle immediatamente consecutive all'ultimo indirizzo di working-zone (es. se ci fosse 16 working-zone RAM(16) conterrebbe l'indirizzo da codificare e RAM(17) l'indirizzo codificato).
 Tutte le ottimizzazioni descritte in seguito sono state valutate sulla base dei dati forniti dalla specifica e non tengono conto dell'eventuale crescita sproposita delle costanti sopracitate.
 \subsection{Obiettivo velocità}
-Da scrivere...
-\subsection{Obiettivo codice semplice}
+La limitazione più stringente in termini di velocità è data dall'accesso alla RAM e dai suoi ritardi. Al fine di minimizzare i tempi di letture e confronti ho optato per un componente che al momento della lettura di un dato imposti contemporaneamente la successiva richiesta. In questo modo posso garantire l'esecuzione dei confronti tra l'indirizzo e le N working-zone in N+1 cicli di clock. Occorreranno poi 2 cicli di clock per la scrittura del dato codificato in memoria e la notificazione di elaborazione completata. Un ulteriorie ciclo di clock mi è servito a garantire che il segnale \textit{o\textunderscore mem} non rimanesse attivo tra un'esecuzione e la successiva.
+Ricapitolando, nel caso pessimo in cui l'indirizzo letto non si trova in nessuna delle work-zone
+\begin{equation*}
+T_\mathrm{esecuzione} = (N+1) \cdot T_\mathrm{clock}+3 \cdot T_\mathrm{clock}
+\end{equation*}
+Nella valutazione del tempo di esecuzione va preso in considerazione il fatto che il segnale di start potrebbe arrivare sul fronte di discesa del clock, qualora succedesse l'esecuzione ritarderà di $T_\mathrm{clock}/2$.
+Nella specifica forntia l'esecuzione massima durerà 1200 ns (nel caso in cui \textit{i\textunderscore start} fosse allineato al fronte di salita del clock), 1250 ns altrimenti.
+\subsection{Obiettivo codice semplice e riutilizzabile}
 Da scrivere...
 \subsection{Funzionamento in sintesi}
 Una soluzione che memorizza tramite registri i valori delle working-zone non avrebbe migliorato in modo significativo i tempi di esecuzione peggiorando però l'area occupata pertando ho optato per la  in memoria a ogni esecuzione.
@@ -75,10 +84,14 @@ La singola esecuzione di una codifica può essere descritta attraverso un numero
 	\item Invio segnale di elaborazione completata (\textit{o\textunderscore done=1}) e attesa feedback (\textit{i\textunderscore start=0}), il dato è disponibile fin dal momento in cui \textit{o\textunderscore done} viene portato a 1;
 \end{enumerate}
 \subsection{Note aggiuntive sulla specifica}
-Come consigliato sul regolamento per la sintesi è stata scelta l'FPGA xc7a200tfbg484-1.
+Per la sintesi è stata scelta l'FPGA xc7a200tfbg484-1.
+
+\noindent\rule{\textwidth}{1pt}
+\newpage
 \section{Architettura}
 \subsection{Macchina a stati finiti}
-\begin{figure}[ht] % ’ht’ tells LaTeX to place the figure ’here’ or at the top of the page
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+\begin{figure}[H]
 \centering % centers the figure
 \begin{tikzpicture}
 %RST,EN_MEM,GET_ADDR,WZ,W_MEM,DONE);
@@ -100,9 +113,8 @@ Come consigliato sul regolamento per la sintesi è stata scelta l'FPGA xc7a200tf
 \caption{macchina a stati finiti implementata.}
 \label{fig:my_label}
 \end{figure}
-\begin{table}[]
+\begin{table}[H]
 \centering
-\caption{stati della macchina a stati finiti implementata.}
 \begin{tabular}{|c|c|}
 \hline
 Stato & Descrizione \\ \hline\hline
@@ -113,6 +125,7 @@ WZ &             \\ \hline
 WRITE &             \\ \hline
 DONE &             \\ \hline
 \end{tabular}
+\caption{stati della macchina a stati finiti implementata.}
 \end{table}
 \section{Sintesi}
 \section{Simulazioni}
