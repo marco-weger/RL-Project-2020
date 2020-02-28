@@ -5,19 +5,27 @@
 \rhead{Weger Marco}
 \cfoot{\thepage}
 
-% (1) choose a font that is available as T1
-% for example:
+\usepackage{tikz} % Import the tikz package
+\usetikzlibrary{automata} % Import library for drawing automata
+\usetikzlibrary{positioning} % ...positioning nodes
+\usetikzlibrary{arrows} % ...customizing arrows
+
+\tikzset{
+->, % makes the edges directed
+node distance=3cm, % specifies the minimum distance between two nodes. Change if necessary.
+every state/.style={thick, fill=gray!10}, % sets the properties for each ’state’ node
+initial text=$ $, % sets the text that appears on the start arrow
+}
+
 \usepackage{lmodern}
-% (2) specify encoding
 \usepackage[T1]{fontenc}
-% (3) load symbol definitions
 \usepackage{textcomp}
 
 \usepackage[italian]{babel}
 
-\addto\captionsitalian{% Replace "english" with the language you use
-  \renewcommand{\contentsname}%
-    {Contenuto}%
+\addto\captionsitalian{
+  \renewcommand{\contentsname}
+    {Contenuto}
 }
 
 \usepackage{graphicx}
@@ -34,12 +42,12 @@
 \newpage
 \pagenumbering{arabic}
 \section{Introduzione}
-Per questo progetto mi sono posto l'obiettivo di descrivere un componente che rispetti le specifiche sia pre sintesi che in post sintesi.
+Per questo progetto mi sono posto l'obiettivo di descrivere un componente che rispetti le specifiche sia in pre sintesi che in post sintesi.
 Ho voluto scrivere del codice di facile lettura e che si adatti in modo semplice e rapido a qualsiasi tipo di modifica del pattern e/o della dimensione della memoria e del suo contenuto (più dettagli in seguito).
-La FPGA consigliata non ci pone particolari vincoli di area quindi ho voluto dare particolare riguardo ai tempi di esecuzione.
+La FPGA consigliata non ci pone particolari vincoli di area nonostante ciò ho voluto dare particolare riguardo sia ai tempi di esecuzione che all'area occupata.
 Per quanto riguarda la frequenza di clock non sono andato alla ricerca di una massimizzazione in quanto la specifica fissa il periodo di clock a 100 ns.
 \subsection{Obiettivi aggiuntivi}
-Una volta rispettate le richieste della specifica fornita mi sono posto i seguenti obiettivi:
+Dopo essermi assicurato di rispettate le richieste della specifica fornita mi sono posto i seguenti obiettivi:
 \begin{enumerate}
 	\item Minimizzare il tempo trascorso dal momento che il segnale di start viene ricevuto al momento di invio del segnale di done;
 	\item Disattivare il segnale di enable della memoria tra le varie esecuzioni;
@@ -51,6 +59,10 @@ Una volta rispettate le richieste della specifica fornita mi sono posto i seguen
 
 Al fine di raggiungere i sopracitati obiettivi ho assunto che l'indirizzo da codificare e l'indirizzo codificato vengano sempre salvati in successione in celle immediatamente consecutive all'ultimo indirizzo di working-zone (es. se ci fosse 16 working-zone RAM(16) conterrebbe l'indirizzo da codificare e RAM(17) l'indirizzo codificato).
 Tutte le ottimizzazioni descritte in seguito sono state valutate sulla base dei dati forniti dalla specifica e non tengono conto dell'eventuale crescita sproposita delle costanti sopracitate.
+\subsection{Obiettivo velocità}
+Da scrivere...
+\subsection{Obiettivo codice semplice}
+Da scrivere...
 \subsection{Funzionamento in sintesi}
 Una soluzione che memorizza tramite registri i valori delle working-zone non avrebbe migliorato in modo significativo i tempi di esecuzione peggiorando però l'area occupata pertando ho optato per la  in memoria a ogni esecuzione.
 La singola esecuzione di una codifica può essere descritta attraverso un numero finito di step (che poi diventeranno una macchina a stati finiti):
@@ -61,7 +73,46 @@ La singola esecuzione di una codifica può essere descritta attraverso un numero
 	\item Scrittura dell'indirizzo codificato in memoria;
 	\item Invio segnale di elaborazione completata (\textit{o\textunderscore done=1}) e attesa feedback (\textit{i\textunderscore start=0}), il dato è disponibile fin dal momento in cui \textit{o\textunderscore done} viene portato a 1;
 \end{enumerate}
+\subsection{Note aggiuntive sulla specifica}
+Come consigliato sul regolamento per la sintesi è stata scelta l'FPGA xc7a200tfbg484-1.
 \section{Architettura}
+\subsection{Macchina a stati finiti}
+\begin{figure}[ht] % ’ht’ tells LaTeX to place the figure ’here’ or at the top of the page
+\centering % centers the figure
+\begin{tikzpicture}
+%RST,EN_MEM,GET_ADDR,WZ,W_MEM,DONE);
+\node[state, initial, minimum size=1.8cm] (RST)  at (0,3) {$RST$};
+\node[state, minimum size=1.8cm] (MEM) at (5,3) {$MEM$};
+\node[state, minimum size=1.8cm] (ADDR) at (10,3) {$ADDR$};
+\node[state, minimum size=1.8cm] (WZ) at (10,0) {$WZ$};
+\node[state, minimum size=1.8cm] (WRITE) at (5,0) {$WRITE$};
+\node[state, accepting, minimum size=1.8cm] (DONE) at (0,0) {$DONE$};
+\draw (RST) edge (MEM);
+\draw (MEM) edge (ADDR);
+\draw (ADDR) edge (WZ);
+\draw (WZ) edge node [midway, below] {ADDR in WZ} node[above, midway] {last WZ checked} (WRITE);
+\draw (WRITE) edge (DONE);
+\draw (DONE) edge (RST);
+\draw (WZ) edge[loop right] node {others} (WZ);
+%{ADDR in WZ or LAST WZ checked}
+\end{tikzpicture}
+\caption{macchina a stati finiti implementata.}
+\label{fig:my_label}
+\end{figure}
+\begin{table}[]
+\centering
+\caption{stati della macchina a stati finiti implementata.}
+\begin{tabular}{|c|c|}
+\hline
+Stato & Descrizione \\ \hline\hline
+RST &             \\ \hline
+MEM &             \\ \hline
+ADDR &             \\ \hline
+WZ &             \\ \hline
+WRITE &             \\ \hline
+DONE &             \\ \hline
+\end{tabular}
+\end{table}
 \section{Sintesi}
 \section{Simulazioni}
 \section{Conclusione}

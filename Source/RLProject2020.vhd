@@ -34,7 +34,7 @@ architecture Behavioral of project_reti_logiche is
       clk, rst : in std_logic
     );
   end component;
-  type state_type is (RST,EN_MEM,GET_ADDR,WZ,W_MEM,DONE);
+  type state_type is (RST,MEM,ADDR,WZ,WRITE,DONE);
   signal next_state, current_state : state_type;
   signal next_addr, current_addr : std_logic_vector(SIZE_ADDR-1 downto 0) := (others => '0');
   signal start_count : std_logic := '0';
@@ -57,7 +57,7 @@ begin
         current_state <= next_state;
         current_addr <= next_addr;
         o_en <= '1';
-        if next_state = W_MEM then
+        if next_state = MEM then
           o_done <= '0';
           o_we <= '1';
         elsif next_state = DONE then
@@ -83,17 +83,17 @@ begin
     case current_state is
       when RST =>
         start_count <= '0';
-        next_state <= EN_MEM;
+        next_state <= MEM;
         o_address <= std_logic_vector(to_unsigned(N_WZ, 16));
         o_data <= current_addr;
         next_addr <= current_addr;
-      when EN_MEM =>
+      when MEM =>
         start_count <= '0';
-        next_state <= GET_ADDR;
+        next_state <= ADDR;
         o_address <= std_logic_vector(to_unsigned(N_WZ, 16));
         o_data <= current_addr;
         next_addr <= current_addr;
-      when GET_ADDR =>
+      when ADDR =>
         start_count <= '1';
         next_state <= WZ;
         o_address <= std_logic_vector(to_unsigned(0, 16));
@@ -103,11 +103,11 @@ begin
         start_count <= '0';
         o_data <= current_addr;
           if (to_integer(unsigned(current_addr)) - to_integer(unsigned(i_data))) >= 0 and
-          (to_integer(unsigned(current_addr)) - to_integer(unsigned(i_data))) <= COUNT_WZ-1 and
-          to_integer(unsigned(count)) < N_WZ-1 then
+          (to_integer(unsigned(current_addr)) - to_integer(unsigned(i_data))) <= SIZE_WZ-1 and
+          to_integer(unsigned(count)) <= N_WZ-1 then
             one_hot := (others => '0');
             one_hot((to_integer(unsigned(current_addr)) - to_integer(unsigned(i_data)))) := '1';
-            next_state <= W_MEM;
+            next_state <= MEM;
             o_address <= std_logic_vector(to_unsigned(N_WZ+1, 16));
             next_addr <= "1" & count & one_hot;
           elsif to_integer(unsigned(count)) < N_WZ-1 then
@@ -115,11 +115,11 @@ begin
             o_address <= std_logic_vector(to_unsigned(1+to_integer(unsigned(count)), 16));
             next_addr <= current_addr;
           else
-            next_state <= W_MEM;
+            next_state <= MEM;
             o_address <= std_logic_vector(to_unsigned(N_WZ+1, 16));
             next_addr <= current_addr;
           end if;
-      when W_MEM =>
+      when MEM =>
         start_count <= '0';
         next_state <= DONE;
         o_address <= std_logic_vector(to_unsigned(N_WZ+1, 16));
