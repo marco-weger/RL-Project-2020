@@ -12,6 +12,7 @@
 
 \usepackage{float}
 \usepackage{amsmath}
+\usepackage{tabularx}
 
 \tikzset{
 ->, % makes the edges directed
@@ -32,6 +33,7 @@ initial text=$ $, % sets the text that appears on the start arrow
 }
 
 \usepackage{graphicx}
+\usepackage{footmisc}
 
 \begin{document}
 \pagenumbering{gobble}
@@ -70,9 +72,19 @@ Ricapitolando, nel caso pessimo in cui l'indirizzo letto non si trova in nessuna
 T_\mathrm{esecuzione} = (N+1) \cdot T_\mathrm{clock}+3 \cdot T_\mathrm{clock}
 \end{equation*}
 Nella valutazione del tempo di esecuzione va preso in considerazione il fatto che il segnale di start potrebbe arrivare sul fronte di discesa del clock, qualora succedesse l'esecuzione ritarderà di $T_\mathrm{clock}/2$.
-Nella specifica forntia l'esecuzione massima durerà 1200 ns (nel caso in cui \textit{i\textunderscore start} fosse allineato al fronte di salita del clock), 1250 ns altrimenti.
+Nella specifica forntia l'esecuzione massima dovrà durare 1200 ns (nel caso in cui \textit{i\textunderscore start} fosse allineato al fronte di salita del clock), 1250 ns altrimenti.
 \subsection{Obiettivo codice semplice e riutilizzabile}
-Da scrivere...
+Ho deciso di realizzare una macchina a stati finiti al fine di rendere facilmente comprensibile ed eventualmente modificabile ogni stato.
+Tutti i segnali sono gestiti da un'unica entity ad eccezione di un contatore generico utilizzato per scandire le working-zone.
+Le seguenti costanti garantiscono un alto livello di riutilizzabilità (tra parentesi i valori assegnati da specifica):
+\begin{itemize}
+	\item \textbf{SIZE\textunderscore MEM} (16): dimensione dell'indirizzo di memoria;
+	\item \textbf{SIZE\textunderscore ADDR} (8): dimensione di una cella di memoria;
+	\item \textbf{SIZE\textunderscore WZ} (4): estensione della singola working-zone;
+	\item \textbf{COUNT\textunderscore WZ} (3): dimensione del vettore \textit{WZ\textunderscore NUM};
+	\item \textbf{N\textunderscore WZ} (8): numero di working-zone.
+\end{itemize}
+Viene naturale notare la relazione tra \textit{COUNT\textunderscore WZ} e \textit{N\textunderscore WZ}, nonostante ciò ho voluto esplicatre costanti differenti in modo da far fronte a situazioni in cui il numero di working-zone non è potenza di 2.
 \subsection{Funzionamento in sintesi}
 Una soluzione che memorizza tramite registri i valori delle working-zone non avrebbe migliorato in modo significativo i tempi di esecuzione peggiorando però l'area occupata pertando ho optato per la  in memoria a ogni esecuzione.
 La singola esecuzione di una codifica può essere descritta attraverso un numero finito di step (che poi diventeranno una macchina a stati finiti):
@@ -86,11 +98,12 @@ La singola esecuzione di una codifica può essere descritta attraverso un numero
 \subsection{Note aggiuntive sulla specifica}
 Per la sintesi è stata scelta l'FPGA xc7a200tfbg484-1.
 
-\noindent\rule{\textwidth}{1pt}
+\noindent\rule{\textwidth}{0.5pt}
 \newpage
 \section{Architettura}
 \subsection{Macchina a stati finiti}
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+Il funzionamento del componente è scandito dalla macchina a stati finiti in figura 1, la funzionalità di ogni singolo stato è descritta nella tabella 1.
+La macchina è sincronizzata con il segnale \textit{i\textunderscore clk} e sensibile al segnale \textit{i\textunderscore start}.
 \begin{figure}[H]
 \centering % centers the figure
 \begin{tikzpicture}
@@ -114,21 +127,89 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 \label{fig:my_label}
 \end{figure}
 \begin{table}[H]
-\centering
-\begin{tabular}{|c|c|}
+\begin{tabularx}{\textwidth}{|l|X|}
 \hline
-Stato & Descrizione \\ \hline\hline
-RST &             \\ \hline
-MEM &             \\ \hline
-ADDR &             \\ \hline
-WZ &             \\ \hline
-WRITE &             \\ \hline
-DONE &             \\ \hline
-\end{tabular}
+Stato&Descrizione\\ \hline\hline
+RST&Stato di reset della macchina. Da questo stato partiranno anche eventuali rieseccuzioni senza reset. Tutti i segnali vengono settati al loro valore di default (compreso \textit{o\textunderscore done} che potrebbe trovarsi alto) e il componente si prepara a leggere il l'indirizzo da codificare. La memoria è disattivata.\\ \hline
+MEM&Utilizzato esclusivamente per abilitare la memoria prima di iniziare le letture.\\ \hline
+ADDR&L'indirzzo da codificare viene prelevato e salvato in un apposito registro. Il contatore che scandisce le working-zone viene resettato e la memoria viene preparata per la lettura della prima working-zone.\\ \hline
+WZ&Unico stato ciciclico della macchina. La condizione di uscita dal ciclo  è il raggiungimento dell'ultima working-zone (caso in cui l'indirizzo non subirà modifiche)
+oppure l'identificazione della working-zone di appartenza (indirizzo da codificare). Nell'ultima esecuzione dello stato la memoria viene preparata per la scrittura del dato (codificato o meno).\\ \hline
+WRITE&Il segnale \textit{o\textunderscore we} viene alzato per permettere alla memoria di prelevare il dato (\textit{o\textunderscore we}).\\ \hline
+DONE&Viene notificato il  termine dell'esecuzione tramite \textit{o\textunderscore done} per poi tornare nello stato RST in attesa di una nuova esecuzione.  \\ \hline
+\end{tabularx}
 \caption{stati della macchina a stati finiti implementata.}
 \end{table}
-\section{Sintesi}
-\section{Simulazioni}
-\section{Conclusione}
 
+\noindent\rule{\textwidth}{0.5pt}
+\newpage
+\section{Sintesi}
+\subsection{Registri sintetizzati}
+Analizzando il report di sintesi e lo schema prodotto si può notare che gli stati della macchina sono codificati con la notazione "one hot". Di seguito sono ricapitolati i registri sintetizzati.
+\begin{table}[H]
+\begin{tabularx}{\textwidth}{|l|l|l|X|}
+\hline
+N° bit&N° registri&Modulo&Contenuto\\ \hline\hline
+8&1&main&Salvataggio dell'indirizzo da confrontare con le working-zone.\\ \hline
+1&3&main&Gestione di segnali a singolo bit: \textit{o\textunderscore done}, \textit{o\textunderscore en}, \textit{o\textunderscore we}. \\ \hline
+6&1&main&Codifica lo stato corrente della macchina secondo la notazione "one hot".\\ \hline
+3&1&counter&Contatore a 3 bit usato per scandire le working-zone.\\ \hline
+\end{tabularx}
+\caption{registri sintetizzati e loro contenuto.}
+\end{table}
+\subsection{Area occupata}
+Tramite le funzionalità di reportistica di VIVADO si possono analizzare il numero di LUT e di Flip Flop (a singolo bit) utilizzati.\footnote{Calcoli basati sulla dimensione della FPGA citata nella sezione 1.5}
+\begin{table}[H]
+\begin{tabularx}{\textwidth}{|X|X|X|X|}
+\hline
+Risorsa&Utilizzo&Disponibilità&Utilizzo in \%\\ \hline\hline
+Look Up Table&30&134600&0,02229\\ \hline
+Flip Flop&20&269200&0,00743\\ \hline
+\end{tabularx}
+\caption{area utilizzata dal componente in relazione con l'FPGA consigliata.}
+\end{table}
+\subsection{Report di timing}
+La specifica non richiede la valutazione del Worst Negative Slack (WNS) di conseguenza verrà considerato massimo. Analizzando i test bench forniti ho notato che la RAM ha un ritardo di esecuzione (T\textsubscript{RAM}) di 1 ns. Dalle precendenti considerezanio segue il minimo periodo calcolabile:
+\begin{equation*}
+T_\mathrm{min} = T_\mathrm{RAM} + T_\mathrm{clock} - WNS \approx 1 ns + 100 ns - 100 ns \approx 1 ns 
+\end{equation*}
+Ne consegue la massima frequenza di clock: $f_\mathrm{max} = 1/T_\mathrm{min} \approx 1 Ghz$.
+\subsection{Warnings in post sintesi}
+Tutti i warning che si sono presentati durante lo sviluppo del componente sono stati risolti senza particolari difficoltà.
+\subsection{Note aggiuntive sulla sintesi}
+Per la sintesi ho usato la versione 2019.2 di XILINX VIVADO con i settaggi di default.
+
+\noindent\rule{\textwidth}{0.5pt}
+\newpage
+\section{Simulazioni}
+Oltre a testare il componente con i test bench forniti dalla specifica ho ritenuto opportuno valutare alcuni casi critici del funzionamento del componente (\textit{descritti nella sezione 4.3}).
+\subsection{Indirizzo non nella working-zone (test bench fornito)}
+\subsubsection{Dati}
+\subsubsection{Risultati in pre sintesi}
+\subsubsection{Risultati in post sintesi}
+\subsection{Indirizzo nella working-zone (test bench fornito)}
+\subsubsection{Dati}
+\subsubsection{Risultati in pre sintesi}
+\subsubsection{Risultati in post sintesi}
+\subsection{Altri test bench}
+
+\noindent\rule{\textwidth}{0.5pt}
+\newpage
+\section{Implementazione}
+Il funzionamento del componente è stato testato con successo anche post implementazione. Non sono state fatte ulteriori analisi sull'implementazione.
+
+\noindent\rule{\textwidth}{0.5pt}
+\newpage
+\section{Conclusione}
+Ricapitolando ho descritto un componente con le seguenti caratteristiche:
+\begin{itemize}
+	\item funzionante in pre/post sintesi e post implementazione;
+	\item ottimizzato sotto il punto di vista dell'area utilizzata;
+	\item ottimizzato sotto il punto di vista del tempo di esecuzione;
+	\item altamente personalizzabile e configurabile mediante l'uso di costanti;
+	\item utilizzo di LUT\footnote{Calcoli basati sulla dimensione della FPGA citata nella sezione 1.5\label{fn}}  par al 0,02229\%;
+	\item utilizzo di FF\footref{fn} par al 0,00743\%.
+\end{itemize}
+
+\noindent\rule{\textwidth}{0.5pt}
 \end{document}
