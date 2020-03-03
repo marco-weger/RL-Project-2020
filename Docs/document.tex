@@ -33,6 +33,7 @@ initial text=$ $, % sets the text that appears on the start arrow
 }
 
 \usepackage{graphicx}
+\usepackage[font=small,labelfont=bf]{caption} % Required for specifying captions to tables and figures
 \usepackage{footmisc}
 
 \begin{document}
@@ -141,6 +142,7 @@ DONE&Viene notificato il  termine dell'esecuzione tramite \textit{o\textundersco
 \caption{stati della macchina a stati finiti implementata.}
 \end{table}
 \subsection{Schema funzionale}
+\includegraphics[height=0.92\textheight]{schematic.png}
 
 \noindent\rule{\textwidth}{0.5pt}
 \newpage
@@ -172,7 +174,7 @@ Flip Flop&20&269200&0,00743\\ \hline
 \subsection{Report di timing}
 La specifica non richiede la valutazione del Worst Negative Slack (WNS) di conseguenza verrà considerato massimo. Analizzando i test bench forniti ho notato che la RAM ha un ritardo di esecuzione (T\textsubscript{RAM}) di 1 ns. Dalle precendenti considerezanio segue il minimo periodo calcolabile:
 \begin{equation*}
-T_\mathrm{min} = T_\mathrm{RAM} + T_\mathrm{clock} - WNS \approx 1 ns + 100 ns - 100 ns \approx 1 ns 
+T_\mathrm{min} = T_\mathrm{RAM} + T_\mathrm{clock} - WNS \approx 1 ns + 100 ns - 100 ns = 1 ns 
 \end{equation*}
 Ne consegue la massima frequenza di clock: $f_\mathrm{max} = 1/T_\mathrm{min} \approx 1 Ghz$.
 \subsection{Warnings in post sintesi}
@@ -185,19 +187,81 @@ Per la sintesi ho usato la versione 2019.2 di XILINX VIVADO con i settaggi di de
 \section{Simulazioni}
 Oltre a testare il componente con i test bench forniti dalla specifica ho ritenuto opportuno valutare alcuni casi critici del funzionamento del componente (\textit{descritti nella sezione 4.3}).
 \subsection{Indirizzo non nella working-zone (test bench fornito)}
+Da questo test bench mi aspetto che tutta la memoria venga scandita e infine ADDR venga riproposto senza variazioni.
+Potremo inoltre valutare il tempo massimo per una singula esecuzione.
 \subsubsection{Dati}
+\begin{itemize}
+	\item Working-zone: [4,13,22,31,37,45,77,91];
+	\item ADDR: 42.
+\end{itemize}
 \subsubsection{Risultati in pre sintesi}
+\captionof{figure}{valori dei segnali della entity durante la simulazione pre sintesi.}
+\includegraphics[width=\textwidth]{tb0.png}
+Questo primo test mi conferma il corretto valore dei segnali in seguito al reset.
+Trascuriamo per semplicità il fatto che il segnale di start arrivi sul fronte di discesa del clock e valutiamo i segnali ad ogni ciclo:
+\begin{enumerate}
+	\item Il segnale \textit{enable\textunderscore wire} viene alzato, mi aspetto che al prossimo clock venga caricato l'ADDR in \textit{mem\textunderscore o\textunderscore data};
+	\item ADDR viene salvato nell'registro locale, alla memoria viene richiesta la prima WZ;
+	\item Il confronto tra ADDR e WZ0 non è positivo, si passa al successivo;
+	\item Il confronto tra ADDR e WZ1 non è positivo, si passa al successivo;
+	\item Il confronto tra ADDR e WZ2 non è positivo, si passa al successivo;
+	\item Il confronto tra ADDR e WZ3 non è positivo, si passa al successivo;
+	\item Il confronto tra ADDR e WZ4 non è positivo, si passa al successivo;
+	\item Il confronto tra ADDR e WZ5 non è positivo, si passa al successivo;
+	\item Il confronto tra ADDR e WZ6 non è positivo, si passa al successivo;
+	\item Il confronto tra ADDR e WZ7 non è positivo, ho terminato i confronti quindi \textit{mem\textunderscore address} viene correttamento portato a 9 (indirizzo dove deve scrivere) e in \textit{mem\textunderscore i\textunderscore data} viene messo 42 (ADDR non modificato);
+	\item Il segnale \textit{mem\textunderscore we} viene alzato per scrivere in memoria il valore finale;
+	\item La scrittura è terminata, si alza \textit{o\textunderscore done}.
+\end{enumerate}
+Una volta riportato \textit{tb\textunderscore start} a '0' il componente torna in modo corretto nella situazione iniziale (\textit{ulteriori test riguardanti esecuzioni in successione nella sezione 4.3}).
+Il tempo di esecuzione, come mi aspettavo, è di 12 cicli di clock.
 \subsubsection{Risultati in post sintesi}
-\subsection{Indirizzo nella working-zone (test bench fornito)}
-\subsubsection{Dati}
-\subsubsection{Risultati in pre sintesi}
-\subsubsection{Risultati in post sintesi}
-\subsection{Altri test bench}
+\captionof{figure}{valori dei segnali della entity durante la simulazione post sintesi.}
+\includegraphics[width=\textwidth]{tb0-ps.png}
 
-\noindent\rule{\textwidth}{0.5pt}
+Non avendo latch e/o segnali indefiniti il test post sintesi è equivalente alla situazione in pre sintesi a meno di alcuni \textit{dont-care} che precedeno il reset iniziale (trascurabili).
+\subsection{Indirizzo nella working-zone (test bench fornito)}
+Da questo test bench possiamo verificare che i confronti con le working-zone e la codifica dell'indirizzo avvengano correttamente.
+\subsubsection{Dati}
+\begin{itemize}
+	\item Working-zone: [4,13,22,31,37,45,77,91];
+	\item ADDR: 33.
+\end{itemize}
+L'indirizzo si trova nella quarta working-zone quindi in output mi aspetto 180 (1-011-0100).
+\subsubsection{Risultati in pre sintesi}
+\captionof{figure}{valori dei segnali della entity durante la simulazione pre sintesi.}
+\includegraphics[width=\textwidth]{tb1.png}
+Questo primo test mi conferma il corretto valore dei segnali in seguito al reset.
+Trascuriamo per semplicità il fatto che il segnale di start arrivi sul fronte di discesa del clock e valutiamo i segnali ad ogni ciclo:
+\begin{enumerate}
+	\item Il segnale \textit{enable\textunderscore wire} viene alzato, mi aspetto che al prossimo clock venga caricato l'ADDR in \textit{mem\textunderscore o\textunderscore data};
+	\item ADDR viene salvato nell'registro locale, alla memoria viene richiesta la prima WZ;
+	\item Il confronto tra ADDR e WZ0 non è positivo, si passa al successivo;
+	\item Il confronto tra ADDR e WZ1 non è positivo, si passa al successivo;
+	\item Il confronto tra ADDR e WZ2 non è positivo, si passa al successivo;
+	\item Il confronto tra ADDR e WZ3 è positivo, \textit{mem\textunderscore address} viene correttamento portato a 9 (indirizzo dove deve scrivere) e in \textit{mem\textunderscore i\textunderscore data} viene messo 180 (ADDR nella quarta working-zone con offset 3);
+	\item Il segnale \textit{mem\textunderscore we} viene alzato per scrivere in memoria il valore finale;
+	\item La scrittura è terminata, si alza \textit{o\textunderscore done}.
+\end{enumerate}
+Una volta riportato \textit{tb\textunderscore start} a '0' il componente torna in modo corretto nella situazione iniziale (\textit{ulteriori test riguardanti esecuzioni in successione nella sezione 4.3}).
+Il tempo di esecuzione è di 8 cicli di clock, quattro in meno rispetto al test bench precedenze dato che non sono stati necessari gli ultimi confronti.
 \newpage
-\section{Implementazione}
-Il funzionamento del componente è stato testato con successo anche post implementazione. Non sono state fatte ulteriori analisi sull'implementazione.
+\subsubsection{Risultati in post sintesi}
+\captionof{figure}{valori dei segnali della entity durante la simulazione post sintesi.}
+\includegraphics[width=\textwidth]{tb1-ps.png}
+Non avendo latch e/o segnali indefiniti il test post sintesi è equivalente alla situazione in pre sintesi a meno di alcuni \textit{dont-care} che precedeno il reset iniziale (trascurabili).
+\subsection{Altri test bench}
+Ho realizzato ulteriori test al fine di verificare le seguenti situazioni:
+\begin{itemize}
+	\item ADDR nella prima working-zone (confine);
+	\item ADDR nell'ultima working-zone (confine);
+	\item ADDR nella working-zone con offset 0 (confine);
+	\item ADDR nella working-zone con offset 3 (confine);
+	\item riesecuzione di una codifica senza invio del segnale di reset;
+	\item invio del segnale di reset nel mentre di un'esecuzione.
+\end{itemize}
+Tutti i test bench, compresi quelli nelle sezioni 4.1 e 4.2 hanno dato esito positivo sia in condizioni pre e post sintesi che in condizioni post implementazione.
+Non sono state fatte ulteriori analisi sulla situazione post implementazione.
 
 \noindent\rule{\textwidth}{0.5pt}
 \newpage
