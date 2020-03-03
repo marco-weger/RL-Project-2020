@@ -48,8 +48,7 @@ initial text=$ $, % sets the text that appears on the start arrow
 \pagenumbering{arabic}
 \section{Introduzione}
 Per questo progetto mi sono posto l'obiettivo di descrivere un componente che rispetti le specifiche sia in pre sintesi che in post sintesi.
-Ho voluto scrivere del codice di facile lettura e che si adatti in modo semplice e rapido a qualsiasi tipo di modifica del pattern e/o della dimensione della memoria e del suo contenuto (più dettagli in seguito).
-La FPGA consigliata non ci pone particolari vincoli di area nonostante ciò ho voluto dare particolare riguardo sia ai tempi di esecuzione che all'area occupata.
+Ho voluto scrivere del codice di facile lettura e che si adatti in modo semplice e rapido a qualsiasi tipo di modifica del pattern e/o della dimensione della memoria e del suo contenuto (più dettagli verranno forniti in seguito).
 Per quanto riguarda la frequenza di clock non sono andato alla ricerca di una massimizzazione in quanto la specifica fissa il periodo di clock a 100 ns.
 \subsection{Obiettivi aggiuntivi}
 Dopo essermi assicurato di rispettate le richieste della specifica fornita mi sono posto i seguenti obiettivi:
@@ -86,7 +85,7 @@ Le seguenti costanti garantiscono un alto livello di riutilizzabilità (tra pare
 \end{itemize}
 Viene naturale notare la relazione tra \textit{COUNT\textunderscore WZ} e \textit{N\textunderscore WZ}, nonostante ciò ho voluto esplicatre costanti differenti in modo da far fronte a situazioni in cui il numero di working-zone non è potenza di 2.
 \subsection{Funzionamento in sintesi}
-Una soluzione che memorizza tramite registri i valori delle working-zone non avrebbe migliorato in modo significativo i tempi di esecuzione peggiorando però l'area occupata pertando ho optato per la  in memoria a ogni esecuzione.
+Una soluzione che memorizza tramite registri i valori delle working-zone avrebbe migliorato i tempi di esecuzione compromettendo l'adattabilità del componente a situazione con un maggior numero di working-zone e/o una RAM più grande; pertando ho optato per scandire la memoria a ogni esecuzione.
 La singola esecuzione di una codifica può essere descritta attraverso un numero finito di step (che poi diventeranno una macchina a stati finiti):
 \begin{enumerate}
 	\item Reset ed attesa del segnale di start (\textit{i\textunderscore start=1});
@@ -96,6 +95,7 @@ La singola esecuzione di una codifica può essere descritta attraverso un numero
 	\item Invio segnale di elaborazione completata (\textit{o\textunderscore done=1}) e attesa feedback (\textit{i\textunderscore start=0}), il dato è disponibile fin dal momento in cui \textit{o\textunderscore done} viene portato a 1;
 \end{enumerate}
 \subsection{Note aggiuntive sulla specifica}
+Non sono stati considerati casi di working-zone sovrapposte in modo parziale o totale, in tal caso il componente termina l'esecuzione e quindi identifica come valida quella nell'indirizzo RAM più basso (la scansione parte dall'indirizzo 0).
 Per la sintesi è stata scelta l'FPGA xc7a200tfbg484-1.
 
 \noindent\rule{\textwidth}{0.5pt}
@@ -140,6 +140,7 @@ DONE&Viene notificato il  termine dell'esecuzione tramite \textit{o\textundersco
 \end{tabularx}
 \caption{stati della macchina a stati finiti implementata.}
 \end{table}
+\subsection{Schema funzionale}
 
 \noindent\rule{\textwidth}{0.5pt}
 \newpage
