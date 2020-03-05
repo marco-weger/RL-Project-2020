@@ -62,18 +62,19 @@ Dopo essermi assicurato di rispettate le richieste della specifica fornita mi so
 	\item Rendere il componente adattabile ad un'eventuale modifica del numero di elementi in una working-zone tramite una costante (WZ\textunderscore OFFSET);
 	\item Rendere il componente adattabile ad un'eventuale modifica del numero di working-zone tramite una costante (WZ\textunderscore NUM).
 \end{enumerate}
-Al fine di raggiungere i sopracitati obiettivi ho assunto che l'indirizzo da codificare e l'indirizzo codificato vengano sempre salvati in successione in celle immediatamente consecutive all'ultimo indirizzo di working-zone (es. se ci fosse 16 working-zone RAM(16) conterrebbe l'indirizzo da codificare e RAM(17) l'indirizzo codificato).
+Al fine di raggiungere i sopracitati obiettivi ho assunto che l'indirizzo da codificare e l'indirizzo codificato vengano sempre salvati in successione in celle immediatamente consecutive all'ultimo indirizzo di working-zone (ad esempio se ci fossero 16 working-zone, RAM(16) conterrebbe l'indirizzo da codificare e RAM(17) l'indirizzo codificato).
+
 Tutte le ottimizzazioni descritte in seguito sono state valutate sulla base dei dati forniti dalla specifica e non tengono conto dell'eventuale crescita sproposita delle costanti sopracitate.
 \subsection{Obiettivo velocità}
-La limitazione più stringente in termini di velocità è data dall'accesso alla RAM e dai suoi ritardi. Al fine di minimizzare i tempi di letture e confronti ho optato per un componente che al momento della lettura di un dato imposti contemporaneamente la successiva richiesta. In questo modo posso garantire l'esecuzione dei confronti tra l'indirizzo e le N working-zone in N+1 cicli di clock. Occorreranno poi 2 cicli di clock per la scrittura del dato codificato in memoria e la notificazione di elaborazione completata. Un ulteriorie ciclo di clock mi è servito a garantire che il segnale \textit{o\textunderscore mem} non rimanesse attivo tra un'esecuzione e la successiva.
-Ricapitolando, nel caso pessimo in cui l'indirizzo letto non si trova in nessuna delle work-zone
+La limitazione più stringente in termini di velocità è data dall'accesso alla RAM e dai suoi ritardi. Al fine di minimizzare i tempi di letture e confronti ho optato per un componente che al momento della lettura di una cella imposti contemporaneamente la successiva richiesta. In questo modo posso garantire l'esecuzione dei confronti tra l'indirizzo e le N working-zone in N+1 cicli di clock. Occorreranno poi 2 cicli di clock per la scrittura del dato codificato in memoria e la notificazione di elaborazione completata. Un ulteriorie ciclo di clock mi è servito a garantire che il segnale \textit{o\textunderscore en} non rimanga attivo tra un'esecuzione e la successiva.
+Ricapitolando, nel caso pessimo in cui l'indirizzo letto non si trova in nessuna delle work-zone:
 \begin{equation*}
 T_\mathrm{esecuzione} = (N+1) \cdot T_\mathrm{clock}+3 \cdot T_\mathrm{clock}
 \end{equation*}
 Nella valutazione del tempo di esecuzione va preso in considerazione il fatto che il segnale di start potrebbe arrivare sul fronte di discesa del clock, qualora succedesse l'esecuzione ritarderà di $T_\mathrm{clock}/2$.
 Nella specifica forntia l'esecuzione massima dovrà durare 1200 ns (nel caso in cui \textit{i\textunderscore start} fosse allineato al fronte di salita del clock), 1250 ns altrimenti.
 \subsection{Obiettivo codice semplice e riutilizzabile}
-Ho deciso di realizzare una macchina a stati finiti al fine di rendere facilmente comprensibile ed eventualmente modificabile ogni stato.
+Ho deciso di realizzare una macchina a stati finiti al fine di rendere il codice facilmente comprensibile ed eventualmente modificabile, anche parzialmente.
 Tutti i segnali sono gestiti da un'unica entity ad eccezione di un contatore generico utilizzato per scandire le working-zone.
 Le seguenti costanti garantiscono un alto livello di riutilizzabilità (tra parentesi i valori assegnati da specifica):
 \begin{itemize}
@@ -95,7 +96,7 @@ La singola esecuzione di una codifica può essere descritta attraverso un numero
 	\item Invio segnale di elaborazione completata (\textit{o\textunderscore done=1}) e attesa feedback (\textit{i\textunderscore start=0}), il dato è disponibile fin dal momento in cui \textit{o\textunderscore done} viene portato a 1;
 \end{enumerate}
 \subsection{Note aggiuntive sulla specifica}
-Non sono stati considerati casi di working-zone sovrapposte in modo parziale o totale, in tal caso il componente termina l'esecuzione e quindi identifica come valida quella nell'indirizzo RAM più basso (la scansione parte dall'indirizzo 0).
+Non sono stati considerati casi di working-zone sovrapposte in modo parziale o totale. Il componente scandisce in modo sequenziale le working-zone quindi viene identifica come valida quella nell'indirizzo RAM più basso (la scansione parte dall'indirizzo 0).
 Per la sintesi è stata scelta l'FPGA xc7a200tfbg484-1.
 
 \noindent\rule{\textwidth}{0.5pt}
@@ -130,7 +131,7 @@ La macchina è sincronizzata con il segnale \textit{i\textunderscore clk} e sens
 \begin{tabularx}{\textwidth}{|l|X|}
 \hline
 Stato&Descrizione\\ \hline\hline
-RST&Stato di reset della macchina. Da questo stato partiranno anche eventuali rieseccuzioni senza reset. Tutti i segnali vengono settati al loro valore di default (compreso \textit{o\textunderscore done} che potrebbe trovarsi alto) e il componente si prepara a leggere il l'indirizzo da codificare. La memoria è disattivata.\\ \hline
+RST&Stato di reset della macchina. Da qui partono eventuali rieseccuzioni senza reset. Tutti i segnali vengono settati al loro valore di default (compreso \textit{o\textunderscore done} che potrebbe trovarsi alto) e il componente si prepara a leggere il l'indirizzo da codificare. La memoria è disattivata.\\ \hline
 MEM&Utilizzato esclusivamente per abilitare la memoria prima di iniziare le letture.\\ \hline
 ADDR&L'indirzzo da codificare viene prelevato e salvato in un apposito registro. Il contatore che scandisce le working-zone viene resettato e la memoria viene preparata per la lettura della prima working-zone.\\ \hline
 WZ&Unico stato ciciclico della macchina. La condizione di uscita dal ciclo  è il raggiungimento dell'ultima working-zone (caso in cui l'indirizzo non subirà modifiche)
@@ -143,11 +144,11 @@ DONE&Viene notificato il  termine dell'esecuzione tramite \textit{o\textundersco
 \subsection{Schema funzionale}
 Analizzando i componenti più significativi dello schema prodotto da Vivado si possono notare le seguenti informazioni:
 \begin{itemize}
-	\item il valore posto in \textit{o\textunderscore data} (il valore finale dell'elaborazione) è derivato da 3 multiplexer:
+	\item il segnale \textit{o\textunderscore data} (il valore finale dell'elaborazione) è derivato da 3 multiplexer:
 	\begin{itemize}
-		\item \textbf{next\textunderscore addr\textunderscore i}: verifica l'appartenza o meno alla working-zone;
-		\item \textbf{next\textunderscore addr0\textunderscore i}: calcola l'eventuale offset nella working-zone;
-		\item \textbf{current\textunderscore addr\textunderscore i}: verifica l'enable della memoria;
+		\item \textbf{next\textunderscore addr\textunderscore i}: discrimina l'appartenza o meno alla working-zone;
+		\item \textbf{next\textunderscore addr0\textunderscore i}: discrimina l'eventuale offset nella working-zone;
+		\item \textbf{current\textunderscore addr\textunderscore i}: è comandato dall'enable della memoria;
 	\end{itemize} 
 	\item i segnali a singolo bit \textit{o\textunderscore done}, \textit{o\textunderscore en} e \textit{o\textunderscore we} sono gestiti dagli omonimi flip flop;
 	\item la macchina a stati finiti è gestita da un registro a 3 bit (\textbf{current\textunderscore state\textunderscore reg});
@@ -162,7 +163,7 @@ Analizzando i componenti più significativi dello schema prodotto da Vivado si p
 \newpage
 \section{Sintesi}
 \subsection{Registri sintetizzati}
-Analizzando il report di sintesi e lo schema prodotto si può notare che gli stati della macchina sono codificati con la notazione "one hot". Di seguito sono ricapitolati i registri sintetizzati.
+Analizzando il report di sintesi e lo schema prodotto si può notare che gli stati della macchina sono codificati con la notazione "one hot" al fine di velocizzare le transizioni. Di seguito sono ricapitolati i registri sintetizzati.
 \begin{table}[H]
 \begin{tabularx}{\textwidth}{|l|l|l|X|}
 \hline
@@ -175,7 +176,7 @@ N° bit&N° registri&Modulo&Contenuto\\ \hline\hline
 \caption{registri sintetizzati e loro contenuto.}
 \end{table}
 \subsection{Area occupata}
-Tramite le funzionalità di reportistica di VIVADO si possono analizzare il numero di LUT e di Flip Flop (a singolo bit) utilizzati.\footnote{Calcoli basati sulla dimensione della FPGA citata nella sezione 1.5}
+Tramite le funzionalità di reportistica di VIVADO si possono analizzare il numero di LUT e di Flip Flop (a singolo bit) utilizzati.
 \begin{table}[H]
 \begin{tabularx}{\textwidth}{|X|X|X|X|}
 \hline
@@ -183,7 +184,7 @@ Risorsa&Utilizzo&Disponibilità&Utilizzo in \%\\ \hline\hline
 Look Up Table&30&134600&0,02229\\ \hline
 Flip Flop&20&269200&0,00743\\ \hline
 \end{tabularx}
-\caption{area utilizzata dal componente in relazione con l'FPGA consigliata.}
+\caption{area utilizzata dal componente in relazione all'FPGA citata nella sezione 1.5.}
 \end{table}
 \subsection{Report di timing}
 La specifica non richiede la valutazione del Worst Negative Slack (WNS) di conseguenza verrà considerato massimo. Analizzando i test bench forniti ho notato che la RAM ha un ritardo di esecuzione (T\textsubscript{RAM}) di 1 ns. Dalle precendenti considerezanio segue il minimo periodo calcolabile:
@@ -191,7 +192,7 @@ La specifica non richiede la valutazione del Worst Negative Slack (WNS) di conse
 T_\mathrm{min} = T_\mathrm{RAM} + T_\mathrm{clock} - WNS \approx 1 ns + 100 ns - 100 ns = 1 ns 
 \end{equation*}
 Ne consegue la massima frequenza di clock: $f_\mathrm{max} = 1/T_\mathrm{min} \approx 1 Ghz$.
-\subsection{Warnings in post sintesi}
+\subsection{Warnings}
 Tutti i warning che si sono presentati durante lo sviluppo del componente sono stati risolti senza particolari difficoltà.
 \subsection{Note aggiuntive sulla sintesi}
 Per la sintesi ho usato la versione 2019.2 di XILINX VIVADO con i settaggi di default.
@@ -201,7 +202,7 @@ Per la sintesi ho usato la versione 2019.2 di XILINX VIVADO con i settaggi di de
 \section{Simulazioni}
 Oltre a testare il componente con i test bench forniti dalla specifica ho ritenuto opportuno valutare alcuni casi critici del funzionamento del componente (\textit{descritti nella sezione 4.3}).
 \subsection{Indirizzo non nella working-zone (test bench fornito)}
-Da questo test bench mi aspetto che tutta la memoria venga scandita e infine ADDR venga riproposto senza variazioni.
+Da questo test bench mi aspetto che tutta la memoria venga scandita e infine ADDR venga proposto senza variazioni.
 Potremo inoltre valutare il tempo massimo per una singula esecuzione.
 \subsubsection{Dati}
 \begin{itemize}
@@ -223,7 +224,7 @@ Trascuriamo per semplicità il fatto che il segnale di start arrivi sul fronte d
 	\item Il confronto tra ADDR e WZ4 non è positivo, si passa al successivo;
 	\item Il confronto tra ADDR e WZ5 non è positivo, si passa al successivo;
 	\item Il confronto tra ADDR e WZ6 non è positivo, si passa al successivo;
-	\item Il confronto tra ADDR e WZ7 non è positivo, ho terminato i confronti quindi \textit{mem\textunderscore address} viene correttamento portato a 9 (indirizzo dove deve scrivere) e in \textit{mem\textunderscore i\textunderscore data} viene messo 42 (ADDR non modificato);
+	\item Il confronto tra ADDR e WZ7 non è positivo, i confronti sono terminati quindi \textit{mem\textunderscore address} viene correttamento portato a 9 (indirizzo dove deve scrivere) e in \textit{mem\textunderscore i\textunderscore data} viene messo 42 (ADDR non modificato);
 	\item Il segnale \textit{mem\textunderscore we} viene alzato per scrivere in memoria il valore finale;
 	\item La scrittura è terminata, si alza \textit{o\textunderscore done}.
 \end{enumerate}
@@ -245,7 +246,6 @@ L'indirizzo si trova nella quarta working-zone quindi in output mi aspetto 180 (
 \subsubsection{Risultati in pre sintesi}
 \captionof{figure}{valori dei segnali della entity durante la simulazione pre sintesi.}
 \includegraphics[width=\textwidth]{tb1.png}
-Questo primo test mi conferma il corretto valore dei segnali in seguito al reset.
 Trascuriamo per semplicità il fatto che il segnale di start arrivi sul fronte di discesa del clock e valutiamo i segnali ad ogni ciclo:
 \begin{enumerate}
 	\item Il segnale \textit{enable\textunderscore wire} viene alzato, mi aspetto che al prossimo clock venga caricato l'ADDR in \textit{mem\textunderscore o\textunderscore data};
@@ -274,15 +274,16 @@ Ho realizzato ulteriori test al fine di verificare le seguenti situazioni:
 	\item riesecuzione di una codifica senza invio del segnale di reset;
 	\item invio del segnale di reset nel mentre di un'esecuzione.
 \end{itemize}
-Tutti i test bench, compresi quelli nelle sezioni 4.1 e 4.2 hanno dato esito positivo sia in condizioni pre e post sintesi che in condizioni post implementazione.
-Non sono state fatte ulteriori analisi sulla situazione post implementazione.
+Tutti i test bench, compresi quelli nelle sezioni 4.1 e 4.2, hanno dato esito positivo sia in pre che in post sintesi.
+I test bench sono stati infine eseguiti in post implementazione confermando i risultati precedenti.
+Non sono state fatte ulteriori analisi sulla situazione in post implementazione.
 
 \noindent\rule{\textwidth}{0.5pt}
 \newpage
 \section{Conclusione}
 Ricapitolando ho descritto un componente con le seguenti caratteristiche:
 \begin{itemize}
-	\item funzionante in pre/post sintesi e post implementazione;
+	\item funzionante in pre/post sintesi e in post implementazione;
 	\item ottimizzato sotto il punto di vista dell'area utilizzata;
 	\item ottimizzato sotto il punto di vista del tempo di esecuzione;
 	\item altamente personalizzabile e configurabile mediante l'uso di costanti;

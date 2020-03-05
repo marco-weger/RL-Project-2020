@@ -1,3 +1,11 @@
+---------------------------------------------
+-----                                   -----
+-----   RL Project 2020 - POLIMI        -----
+-----   MIT License                     -----
+-----   Copyright (c) 2019 Marco Weger  -----
+-----                                   -----
+---------------------------------------------
+
 package CONSTANTS is
   constant SIZE_MEM : natural := 16;  -- dimensione indirizzo memoria
   constant SIZE_ADDR : natural := 8;  -- dimensione cella memoria
