@@ -54,15 +54,15 @@ Per quanto riguarda la frequenza di clock non sono andato alla ricerca di una ma
 \subsection{Obiettivi aggiuntivi}
 Dopo essermi assicurato di rispettate le richieste della specifica fornita mi sono posto i seguenti obiettivi:
 \begin{enumerate}
-	\item Minimizzare il tempo trascorso dal momento che il segnale di start viene ricevuto al momento di invio del segnale di done;
-	\item Disattivare il segnale di enable della memoria tra le varie esecuzioni;
-	\item Descrivere un componente in grado di funzionare anche nel caso ci fossero reset asincroni durante l'esecuzione di una codifica;
-	\item Rendere il componente adattabile ad un'eventuale modifica della lunghezza dell'indirizzo della cella di memoria tramite una costante;
-	\item Rendere il componente adattabile ad un'eventuale modifica della dimensione di una singola cella di memoria tramite una costante (ADDR);
-	\item Rendere il componente adattabile ad un'eventuale modifica del numero di elementi in una working-zone tramite una costante (WZ\textunderscore OFFSET);
-	\item Rendere il componente adattabile ad un'eventuale modifica del numero di working-zone tramite una costante (WZ\textunderscore NUM).
+	\item minimizzare il tempo che trascorre da quando il segnale di start viene ricevuto al momento di invio del segnale di done;
+	\item disattivare il segnale di enable della memoria tra le varie esecuzioni;
+	\item descrivere un componente in grado di funzionare anche nel caso ci fossero reset asincroni durante l'esecuzione di una codifica;
+	\item rendere il componente adattabile ad un'eventuale modifica della lunghezza dell'indirizzo della cella di memoria tramite una costante;
+	\item rendere il componente adattabile ad un'eventuale modifica della dimensione di una singola cella di memoria tramite una costante (ADDR);
+	\item rendere il componente adattabile ad un'eventuale modifica del numero di elementi in una working-zone tramite una costante (WZ\textunderscore OFFSET);
+	\item rendere il componente adattabile ad un'eventuale modifica del numero di working-zone tramite una costante (WZ\textunderscore NUM).
 \end{enumerate}
-Al fine di raggiungere i sopracitati obiettivi ho assunto che l'indirizzo da codificare e l'indirizzo codificato vengano sempre salvati in successione in celle immediatamente consecutive all'ultimo indirizzo di working-zone (ad esempio se ci fossero 16 working-zone, RAM(16) conterrebbe l'indirizzo da codificare e RAM(17) l'indirizzo codificato).
+Al fine di raggiungere i sopracitati obiettivi ho assunto che l'indirizzo da codificare e l'indirizzo codificato vengano sempre salvati nelle celle immediatamente consecutive all'ultimo indirizzo di working-zone (ad esempio se ci fossero 16 working-zone, RAM(16) conterrebbe l'indirizzo da codificare e RAM(17) l'indirizzo codificato).
 
 Tutte le ottimizzazioni descritte in seguito sono state valutate sulla base dei dati forniti dalla specifica e non tengono conto dell'eventuale crescita sproposita delle costanti sopracitate.
 \subsection{Obiettivo velocità}
@@ -89,11 +89,11 @@ Viene naturale notare la relazione tra \textit{COUNT\textunderscore WZ} e \texti
 Una soluzione che memorizza tramite registri i valori delle working-zone avrebbe migliorato i tempi di esecuzione compromettendo l'adattabilità del componente a situazione con un maggior numero di working-zone e/o una RAM più grande; pertando ho optato per scandire la memoria a ogni esecuzione.
 La singola esecuzione di una codifica può essere descritta attraverso un numero finito di step (che poi diventeranno una macchina a stati finiti):
 \begin{enumerate}
-	\item Reset ed attesa del segnale di start (\textit{i\textunderscore start=1});
-	\item Abilitazione della memoria e richiesta dell'indirizo da codificare (salvato in un registro);
-	\item Richiesta della i-esima working-zone e confronto con l'indirizzo salvato, eventuale codifica e passaggio a step successivo (passo ripetuto per i compreso tra 0 e il numero di working-zone);
-	\item Scrittura dell'indirizzo codificato in memoria;
-	\item Invio segnale di elaborazione completata (\textit{o\textunderscore done=1}) e attesa feedback (\textit{i\textunderscore start=0}), il dato è disponibile fin dal momento in cui \textit{o\textunderscore done} viene portato a 1;
+	\item reset ed attesa del segnale di start (\textit{i\textunderscore start=1});
+	\item abilitazione della memoria e richiesta dell'indirizo da codificare (salvato in un registro);
+	\item richiesta della \textit{i-esima} working-zone e confronto con l'indirizzo salvato, eventuale codifica e passaggio a step successivo (passo ripetuto per \textit{i} compreso tra 0 e il numero di working-zone);
+	\item scrittura dell'indirizzo codificato in memoria;
+	\item invio segnale di elaborazione completata (\textit{o\textunderscore done=1}) e attesa feedback (\textit{i\textunderscore start=0}), il dato è disponibile fin dal momento in cui \textit{o\textunderscore done} viene portato a 1;
 \end{enumerate}
 \subsection{Note aggiuntive sulla specifica}
 Non sono stati considerati casi di working-zone sovrapposte in modo parziale o totale. Il componente scandisce in modo sequenziale le working-zone quindi viene identifica come valida quella nell'indirizzo RAM più basso (la scansione parte dall'indirizzo 0).
@@ -136,10 +136,10 @@ MEM&Utilizzato esclusivamente per abilitare la memoria prima di iniziare le lett
 ADDR&L'indirzzo da codificare viene prelevato e salvato in un apposito registro. Il contatore che scandisce le working-zone viene resettato e la memoria viene preparata per la lettura della prima working-zone.\\ \hline
 WZ&Unico stato ciciclico della macchina. La condizione di uscita dal ciclo  è il raggiungimento dell'ultima working-zone (caso in cui l'indirizzo non subirà modifiche)
 oppure l'identificazione della working-zone di appartenza (indirizzo da codificare). Nell'ultima esecuzione dello stato la memoria viene preparata per la scrittura del dato (codificato o meno).\\ \hline
-WRITE&Il segnale \textit{o\textunderscore we} viene alzato per permettere alla memoria di prelevare il dato (\textit{o\textunderscore we}).\\ \hline
+WRITE&Il segnale \textit{o\textunderscore we} viene alzato per permettere alla memoria di prelevare il dato.\\ \hline
 DONE&Viene notificato il  termine dell'esecuzione tramite \textit{o\textunderscore done} per poi tornare nello stato RST in attesa di una nuova esecuzione.  \\ \hline
 \end{tabularx}
-\caption{stati della macchina a stati finiti implementata.}
+\caption{stati della macchina implementata.}
 \end{table}
 \subsection{Schema funzionale}
 Analizzando i componenti più significativi dello schema prodotto da Vivado si possono notare le seguenti informazioni:
@@ -193,7 +193,7 @@ T_\mathrm{min} = T_\mathrm{RAM} + T_\mathrm{clock} - WNS \approx 1 ns + 100 ns -
 \end{equation*}
 Ne consegue la massima frequenza di clock: $f_\mathrm{max} = 1/T_\mathrm{min} \approx 1 Ghz$.
 \subsection{Warnings}
-Tutti i warning che si sono presentati durante lo sviluppo del componente sono stati risolti senza particolari difficoltà.
+Tutti i warnings che si sono presentati durante lo sviluppo del componente sono stati risolti senza particolari difficoltà.
 \subsection{Note aggiuntive sulla sintesi}
 Per la sintesi ho usato la versione 2019.2 di XILINX VIVADO con i settaggi di default.
 
@@ -257,7 +257,7 @@ Trascuriamo per semplicità il fatto che il segnale di start arrivi sul fronte d
 	\item Il segnale \textit{mem\textunderscore we} viene alzato per scrivere in memoria il valore finale;
 	\item La scrittura è terminata, si alza \textit{o\textunderscore done}.
 \end{enumerate}
-Una volta riportato \textit{tb\textunderscore start} a '0' il componente torna in modo corretto nella situazione iniziale (\textit{ulteriori test riguardanti esecuzioni in successione nella sezione 4.3}).
+Una volta riportato \textit{tb\textunderscore start} a '0' il componente torna in modo corretto nella situazione iniziale (ulteriori test riguardanti esecuzioni in successione nella sezione 4.3).
 Il tempo di esecuzione è di 8 cicli di clock, quattro in meno rispetto al test bench precedenze dato che non sono stati necessari gli ultimi confronti.
 \newpage
 \subsubsection{Risultati in post sintesi}
@@ -287,7 +287,7 @@ Ricapitolando ho descritto un componente con le seguenti caratteristiche:
 	\item ottimizzato sotto il punto di vista dell'area utilizzata;
 	\item ottimizzato sotto il punto di vista del tempo di esecuzione;
 	\item altamente personalizzabile e configurabile mediante l'uso di costanti;
-	\item utilizzo di LUT\footnote{Calcoli basati sulla dimensione della FPGA citata nella sezione 1.5\label{fn}}  par al 0,02229\%;
+	\item utilizzo di LUT\footnote{Calcoli basati sull'FPGA citata nella sezione 1.5\label{fn}}  par al 0,02229\%;
 	\item utilizzo di FF\footref{fn} par al 0,00743\%.
 \end{itemize}
 
